@@ -1,0 +1,571 @@
+<title>Eval de Edição</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Sora:wght@500;600&display=swap">
+<style>
+/* Layout: cabeçalho de progresso, palco (player + decisão) à esquerda, lista de chunks à direita; empilha no celular.
+   Identidade "Autoridade quieta": petróleo dominante, off-white, âmbar como único acento. Vermelho-tijolo só pra "remover". */
+:root{
+  --bg:#F7F5F0; --surface:#FFFFFF; --surface2:#EFECE4; --fg:#33383D; --muted:#6B7378; --line:#DDD9CE;
+  --petrol:#1E3A47; --on-petrol:#F7F5F0; --amber:#E0A458; --amber-ink:#7A4E10;
+  --c-manter:#1E3A47; --c-remover:#B5443B; --c-motion:#C98A2E; --c-imagem:#5F7C8C; --c-mix:#8A6F4E;
+  --font-display:"Sora","Helvetica Neue",Arial,sans-serif; --font-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif; --font-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10202A; --surface:#182C37; --surface2:#20384A; --fg:#E9E6DE; --muted:#9AA7AE; --line:#2C4553;
+  --petrol:#0C1A22; --on-petrol:#F7F5F0; --amber-ink:#F0C27E;
+  --c-manter:#6FA6B8; --c-remover:#D9776D; --c-motion:#E0A458; --c-imagem:#8CA7B6; --c-mix:#C9A27A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10202A; --surface:#182C37; --surface2:#20384A; --fg:#E9E6DE; --muted:#9AA7AE; --line:#2C4553;
+  --petrol:#0C1A22; --on-petrol:#F7F5F0; --amber-ink:#F0C27E;
+  --c-manter:#6FA6B8; --c-remover:#D9776D; --c-motion:#E0A458; --c-imagem:#8CA7B6; --c-mix:#C9A27A; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 var(--font-body);margin:0;padding-block:0 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.top{background:var(--petrol);color:var(--on-petrol);margin-left:calc(-1*max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1*max(16px,env(safe-area-inset-right,0px)));padding:14px max(16px,env(safe-area-inset-right,0px)) 14px max(16px,env(safe-area-inset-left,0px));display:flex;flex-wrap:wrap;gap:12px 28px;align-items:center}
+.top h1{font:600 17px/1.2 var(--font-display);margin:0;letter-spacing:.01em}
+.top .sub{opacity:.7;font-size:12px}
+.stats{display:flex;gap:22px;flex-wrap:wrap;margin-left:auto}
+.stat{display:flex;flex-direction:column;min-width:0}
+.stat b{font:500 18px/1.1 var(--font-mono);font-variant-numeric:tabular-nums}
+.stat span{font-size:11px;opacity:.7;text-transform:uppercase;letter-spacing:.08em}
+.prog{flex-basis:100%;height:4px;background:rgba(247,245,240,.18);border-radius:2px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--amber);width:0;transition:width .25s}
+.btn{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 12px}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#2A1D07;font-weight:600}
+.btn.ghost{background:transparent;border-color:rgba(247,245,240,.35);color:var(--on-petrol)}
+.btn[disabled]{opacity:.45;cursor:default}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;margin-top:18px;align-items:start}
+@media (max-width:900px){.app{grid-template-columns:minmax(0,1fr)}}
+.stage{display:flex;flex-direction:column;gap:14px;min-width:0}
+.chead{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.chead h2{font:500 16px var(--font-display);margin:0}
+.chead .mono{color:var(--muted);font-size:12px}
+.sug{background:var(--surface2);border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.sug small{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:11px;display:block;margin-bottom:2px}
+.sug p{margin:0;flex:1 1 220px;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;border:1.5px solid currentColor;white-space:nowrap}
+.pill.fill{color:#fff!important;background:currentColor}
+.pill.fill span{color:#fff}
+.a-manter{color:var(--c-manter)}.a-remover{color:var(--c-remover)}.a-motion{color:var(--c-motion)}.a-imagem{color:var(--c-imagem)}.a-imagem-motion{color:var(--c-mix)}
+.playerbox{background:#000;border-radius:8px;overflow:hidden;display:flex;justify-content:center}
+video{display:block;max-width:100%;max-height:min(52vh,460px);background:#000}
+.bar{position:relative;height:104px;background:var(--surface2);border-radius:6px;touch-action:none;cursor:crosshair;user-select:none;overflow:hidden}
+.bar .ctx,.bar .kept,.bar .cut,.bar .play,.bar .h,.bar .selreg{position:absolute;top:0;bottom:0}
+.bar canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.bar .kept{background:color-mix(in srgb,var(--c-manter) 22%,transparent);border-radius:3px;pointer-events:none}
+.bar.removed .kept{background:color-mix(in srgb,var(--c-remover) 22%,transparent)}
+.bar .cut{background:repeating-linear-gradient(135deg,var(--c-remover) 0 3px,transparent 3px 7px);box-shadow:inset 2px 0 0 var(--c-remover),inset -2px 0 0 var(--c-remover);opacity:.6;pointer-events:none}
+.bar .selreg{background:color-mix(in srgb,var(--amber) 28%,transparent);box-shadow:inset 0 0 0 1.5px var(--amber);pointer-events:none}
+.zoomrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.zoomrow .btn{padding:3px 9px}
+.legend{display:inline-flex;gap:12px;font-size:11px;color:var(--muted);margin-left:auto;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.manual{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:0 14px;margin-top:14px}
+.manual summary{cursor:pointer;padding:10px 0;font:500 14px var(--font-display)}
+.manual ol,.manual ul{margin:0 0 10px;padding-left:20px;display:flex;flex-direction:column;gap:5px}
+.manual table{border-collapse:collapse;margin:6px 0 12px;font-size:13px}
+.manual td{padding:2px 14px 2px 0;vertical-align:top}
+.manual kbd{font:500 12px var(--font-mono);background:var(--surface2);border-radius:4px;padding:1px 6px}
+.manual h4{font:500 12px var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:12px 0 6px}
+.bar .pend{position:absolute;top:0;bottom:0;width:2px;background:var(--c-remover)}
+.bar .play{width:2px;background:var(--amber);pointer-events:none;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.bar .h{width:12px;margin-left:-6px;cursor:ew-resize;display:flex;align-items:center;justify-content:center}
+.bar .h::after{content:"";width:4px;height:60%;border-radius:2px;background:var(--fg)}
+.ticks{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:-6px}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ctrls label{display:inline-flex;gap:6px;align-items:center;color:var(--muted);font-size:13px}
+.num{width:78px;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:3px 6px;font-family:var(--font-mono);font-size:12px}
+.trim{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px}
+.cuts{display:flex;flex-direction:column;gap:6px}
+.cutrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--c-remover);font-size:12px}
+.text{font:500 17px/1.5 var(--font-display);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0;min-height:3em;overflow-wrap:anywhere}
+.acts{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.act{background:var(--surface);border:2px solid var(--line);border-radius:8px;padding:9px 10px;text-align:left;display:flex;flex-direction:column;gap:2px;font-weight:600}
+.act kbd{font:500 11px var(--font-mono);color:var(--muted)}
+.act.on{background:currentColor;border-color:currentColor}
+.act.on *{color:#fff}
+.act.sugg:not(.on){border-style:dashed;border-color:currentColor}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:transparent;border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:12px;color:var(--muted)}
+.tag.on{background:var(--petrol);color:var(--on-petrol);border-color:var(--petrol)}
+:root[data-theme="dark"] .tag.on{background:var(--surface2);color:var(--fg);border-color:var(--muted)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .tag.on{background:var(--surface2);color:var(--fg);border-color:var(--muted)}}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label,.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.field input,.field textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%}
+.field textarea{min-height:64px;resize:vertical}
+.imgs{display:flex;gap:8px;flex-wrap:wrap}
+.imgs .im{width:112px;border:2px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface);padding:0;text-align:left}
+.imgs .im.on{border-color:var(--amber)}
+.imgs img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
+.imgs .im span{display:block;font-size:11px;padding:3px 6px;overflow-wrap:anywhere}
+.side{position:sticky;top:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
+@media (max-width:900px){.side{position:static}}
+.side h3{margin:0;font:500 13px var(--font-display);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.list{display:flex;flex-direction:column;gap:2px;max-height:calc(100vh - 150px);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+@media (max-width:900px){.list{max-height:360px}}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 10px;border:0;border-bottom:1px solid var(--line);background:transparent;text-align:left;border-left:3px solid transparent}
+.row:last-child{border-bottom:0}
+.row.sel{background:var(--surface2);border-left-color:var(--amber)}
+.row .n{font:500 11px var(--font-mono);color:var(--muted)}
+.row .t{min-width:0}
+.row .t b{display:block;font:400 11px var(--font-mono);color:var(--muted)}
+.row .t span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.row .st{display:flex;gap:4px;align-items:center}
+.dot{width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;font:600 10px var(--font-mono);border:1.5px solid currentColor}
+.dot.fill{background:currentColor}.dot.fill b{color:#fff}
+.dot.empty{border-style:dashed;opacity:.5}
+.mark{font-size:12px;width:14px;text-align:center}
+.mark.ok{color:var(--c-manter)}.mark.no{color:var(--c-motion)}
+.saved{font-size:12px;color:var(--muted)}
+.saved.err{color:var(--c-remover)}
+.empty-state{border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted);margin-top:24px}
+.empty-state h2{font:500 16px var(--font-display);color:var(--fg);margin:0 0 6px}
+.hint{color:var(--muted);font-size:12px}
+.done{background:var(--surface2);border-radius:8px;padding:10px 12px;font-size:13px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div>
+    <h1>Eval de Edição</h1>
+    <div class="sub" id="vtitle">carregando…</div>
+  </div>
+  <select id="vsel" class="num" style="width:auto;max-width:220px" hidden aria-label="Vídeo"></select>
+  <div class="stats">
+    <div class="stat"><b id="s-rev">0/0</b><span>revisados</span></div>
+    <div class="stat"><b id="s-agree">–</b><span>concordei</span></div>
+    <div class="stat"><b id="s-dur">–</b><span>duração final</span></div>
+  </div>
+  <button class="btn ghost" id="finish" hidden>Concluir rodada</button>
+  <button class="btn ghost" id="help" aria-label="Manual rápido">? Manual</button>
+  <div class="prog"><i id="progbar"></i></div>
+</header>
+
+<details class="manual" id="manual">
+  <summary>Manual rápido (1 minuto)</summary>
+  <h4>O fluxo</h4>
+  <ol>
+    <li><b>Lista à direita:</b> cada item é um chunk, um trecho de fala entre silêncios maiores que 0,7 s. O círculo tracejado é a sugestão do Claude, o cheio é a sua decisão, ✓ quer dizer que você concordou e ≠ que decidiu diferente.</li>
+    <li><b>Ouça</b> com espaço. Leia a sugestão do Claude e o motivo.</li>
+    <li><b>Decida:</b> teclas <kbd>1</kbd> manter · <kbd>2</kbd> remover · <kbd>3</kbd> motion · <kbd>4</kbd> imagem · <kbd>5</kbd> imagem + motion. <kbd>Enter</kbd> aceita a sugestão e vai pro próximo.</li>
+    <li><b>Motion ou imagem:</b> escreva no campo que aparece o que entraria ali. Pode enviar uma imagem sua.</li>
+    <li><b>Por quê:</b> marque as tags (retake, enchimento, erro de fala...) e deixe uma nota quando discordar. É isso que ensina o Claude.</li>
+    <li><b>Terminou?</b> Clique em “Concluir rodada” e avise o Claude no chat. Ele lê tudo direto daqui.</li>
+  </ol>
+  <h4>A onda sonora (onde tem áudio)</h4>
+  <ul>
+    <li>Barras escuras são som acima de −40 dB (fala, tosse, ruído). Barras claras e baixas são silêncio ou respiração. A linha âmbar é o ponto de reprodução.</li>
+    <li>A faixa verde é o chunk. Os 1,2 s antes e depois aparecem sem faixa, pra você ver o que o corte automático deixou de fora.</li>
+    <li><b>Ajustar as pontas:</b> arraste as alças das extremidades, ou toque <kbd>I</kbd> (início) e <kbd>O</kbd> (fim) na posição do player. Dá pra esticar o chunk pra incluir uma palavra cortada.</li>
+  </ul>
+  <h4>Cortar uma tosse, gaguejada ou erro dentro do chunk</h4>
+  <ol>
+    <li>Dê zoom no trecho com <kbd>+</kbd> (ou os botões) e use ◀ ▶ pra andar pela onda.</li>
+    <li>Arraste sobre a onda pra selecionar (fica âmbar). Clique sem arrastar só move o player.</li>
+    <li><b>Ouvir seleção</b> (<kbd>S</kbd>) confirma que é só aquilo. Depois <b>Cortar seleção</b> (<kbd>X</kbd> ou <kbd>Delete</kbd>). O trecho aparece listrado em vermelho.</li>
+    <li>Faça quantos cortes quiser no mesmo chunk. Ajuste fino nos números da lista de cortes, ou remova um corte pelo botão.</li>
+    <li>Deixe “pular cortes” ligado: o player toca o resultado como ficará. Desligado, você ouve o trecho cortado.</li>
+  </ol>
+  <h4>Atalhos</h4>
+  <table>
+    <tr><td><kbd>←</kbd> <kbd>→</kbd></td><td>chunk anterior / próximo</td><td><kbd>espaço</kbd></td><td>tocar / pausar</td></tr>
+    <tr><td><kbd>R</kbd></td><td>tocar do início do chunk</td><td><kbd>S</kbd></td><td>ouvir a seleção</td></tr>
+    <tr><td><kbd>X</kbd></td><td>cortar a seleção (ou marcar começo e fim no player)</td><td><kbd>Delete</kbd></td><td>cortar a seleção</td></tr>
+    <tr><td><kbd>+</kbd> <kbd>−</kbd> <kbd>0</kbd></td><td>zoom / chunk inteiro</td><td><kbd>I</kbd> <kbd>O</kbd></td><td>início / fim do chunk no player</td></tr>
+  </table>
+  <p class="hint">Tudo salva sozinho (aparece “salvo” ao lado do título do chunk). Nada é renderizado nem publicado por causa disso.</p>
+</details>
+
+<div id="empty" class="empty-state" hidden>
+  <h2>Nenhum vídeo nesta rodada ainda</h2>
+  <p>O Claude prepara o vídeo (chunks, sugestões e prévia) e carrega aqui. Peça no chat: “prepara um vídeo pro eval de edição”.</p>
+</div>
+
+<main class="app" id="app" hidden>
+  <section class="stage">
+    <div class="chead"><h2 id="ch-title"></h2><span class="mono" id="ch-time"></span><span class="saved" id="saved"></span></div>
+    <div class="sug" id="sug"></div>
+    <div class="playerbox"><video id="v" playsinline preload="auto"></video></div>
+    <div>
+      <div class="bar" id="bar" aria-label="Onda sonora do chunk. Clique para ir a um ponto, arraste para selecionar um trecho.">
+        <canvas id="wave"></canvas>
+        <div class="kept" id="b-kept"></div><div id="b-cuts"></div><div class="selreg" id="b-sel" hidden></div><div class="pend" id="b-pend" hidden></div>
+        <div class="play" id="b-play"></div>
+        <div class="h" id="h-in" title="Início do chunk"></div><div class="h" id="h-out" title="Fim do chunk"></div>
+      </div>
+      <div class="ticks mono"><span id="t-lo"></span><span id="t-hi"></span></div>
+      <div class="zoomrow">
+        <button class="btn" id="z-out" title="Menos zoom (-)">−</button><button class="btn" id="z-in" title="Mais zoom (+)">+</button>
+        <button class="btn" id="z-fit" title="Ver o chunk inteiro (0)">chunk inteiro</button>
+        <button class="btn" id="z-l" title="Voltar a janela">◀</button><button class="btn" id="z-r" title="Avançar a janela">▶</button>
+        <span class="hint mono" id="z-info"></span>
+        <span class="legend"><span><i style="background:var(--fg)"></i>tem som (acima de −40 dB)</span><span><i style="background:var(--muted);opacity:.5"></i>silêncio / respiração</span><span><i style="background:var(--c-manter);opacity:.5"></i>chunk</span><span><i style="background:var(--c-remover);opacity:.7"></i>cortado</span></span>
+      </div>
+    </div>
+    <div class="ctrls">
+      <button class="btn" id="b-prev">◀ Anterior</button>
+      <button class="btn" id="b-play-btn">▶ Tocar <span class="hint">(espaço)</span></button>
+      <button class="btn" id="b-replay">↺ Do início <span class="hint">(R)</span></button>
+      <button class="btn" id="b-next">Próximo ▶</button>
+      <label><input type="checkbox" id="o-skip" checked> pular cortes</label>
+      <label><input type="checkbox" id="o-seq"> seguir pro próximo sozinho</label>
+    </div>
+    <div class="ctrls">
+      <button class="btn" id="b-in">Início aqui <span class="hint">(I)</span></button>
+      <button class="btn" id="b-out">Fim aqui <span class="hint">(O)</span></button>
+      <button class="btn" id="b-cutsel" disabled>✂ Cortar seleção <span class="hint">(X / Delete)</span></button>
+      <button class="btn" id="b-hearsel" disabled>▶ Ouvir seleção <span class="hint">(S)</span></button>
+      <button class="btn" id="b-cut">✂ Marcar corte no player <span class="hint">(X)</span></button>
+      <span class="trim mono"><span>início <input class="num" id="n-in" type="number" step="0.05"></span><span>fim <input class="num" id="n-out" type="number" step="0.05"></span></span>
+    </div>
+    <div class="cuts" id="cuts"></div>
+    <p class="text" id="text"></p>
+    <div>
+      <div class="lbl" style="margin-bottom:6px">O que fazer com este chunk <span class="hint" style="text-transform:none;letter-spacing:0">· tracejado = sugestão do Claude · Enter aceita e vai pro próximo</span></div>
+      <div class="acts" id="acts"></div>
+    </div>
+    <div><div class="lbl" style="margin-bottom:6px">Por quê (opcional)</div><div class="tags" id="tags"></div></div>
+    <div class="field" id="f-detail" hidden><label for="detail" id="l-detail"></label><input id="detail" type="text" autocomplete="off"></div>
+    <div id="imgbox" hidden>
+      <div class="lbl" style="margin-bottom:6px">Imagem</div>
+      <div class="imgs" id="imgs"></div>
+      <button class="btn" id="upimg" style="margin-top:8px" hidden>Enviar minha imagem</button>
+      <input type="file" id="upfile" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+    </div>
+    <div class="field"><label for="note">Nota livre (o Claude lê isso)</label><textarea id="note"></textarea></div>
+    <div class="done" id="donebox" hidden></div>
+  </section>
+  <aside class="side">
+    <h3><span>Chunks</span><label class="hint"><input type="checkbox" id="o-pend"> só pendentes</label></h3>
+    <div class="list" id="list"></div>
+    <div class="hint">Atalhos: ←/→ navega · 1–5 ação · Enter aceita sugestão · espaço toca · I/O início/fim · X corta trecho (aperte no começo e de novo no fim)</div>
+  </aside>
+</main>
+
+<script>
+(async () => {
+const $ = s => document.querySelector(s);
+const ACTIONS = [["manter","Manter","1"],["remover","Remover","2"],["motion","Motion","3"],["imagem","Imagem","4"],["imagem+motion","Imagem + motion","5"]];
+const LABEL = Object.fromEntries(ACTIONS.map(a => [a[0], a[1]]));
+const TAGS = ["retake","falso início","enchimento","erro de fala","fora do roteiro","respiração","bom como está","precisa de visual"];
+const cls = a => "a-" + String(a).replace("+","-");
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const r2 = x => Math.round(x * 100) / 100;
+const fmt = t => { t = Math.max(0, t); const m = Math.floor(t / 60); return m + ":" + (t % 60).toFixed(1).padStart(4, "0"); };
+const dur = s => s >= 60 ? Math.floor(s / 60) + "m" + String(Math.round(s % 60)).padStart(2, "0") + "s" : s.toFixed(1) + "s";
+
+const S = {videos: [], vid: null, chunks: [], rev: {}, sel: 0, pend: null, startedInside: false, view: null, region: null, selStop: null};
+const PR = 100, THR = 85; /* 100 picos/s; 85 = −40 dB na escala 0–255 (−60…0 dB), igual ao preparar.py */
+let PK = null;
+let db = null, assets = null, unsubs = [];
+const v = $("#v");
+
+try { db = await claude.use("db"); } catch (e) { db = null; }
+try { assets = await claude.use("assets"); } catch (e) { assets = null; }
+if (!db) {
+  $("#vtitle").textContent = "banco indisponível";
+  $("#empty").hidden = false;
+  $("#empty").innerHTML = "<h2>Abra esta página logado no claude.ai</h2><p>As decisões ficam salvas num banco que só funciona com login.</p>";
+  return;
+}
+if (assets) $("#upimg").hidden = false;
+
+const cur = () => S.chunks[S.sel];
+const R = c => S.rev[c.id] || null;
+const eff = c => { const r = R(c); return {a: r?.trimIn ?? c.start, b: r?.trimOut ?? c.end, cuts: r?.cuts || [], action: r?.action || null}; };
+const full = c => ({lo: Math.max(0, c.start - 1.2), hi: Math.min(S.duration || c.end + 1.2, c.end + 1.2)});
+const range = c => S.view || full(c);
+function mergeCuts(list) {
+  const out = [];
+  [...list].sort((x, y) => x[0] - y[0]).forEach(k => { const l = out[out.length - 1]; if (l && k[0] <= l[1]) l[1] = Math.max(l[1], k[1]); else out.push([r2(k[0]), r2(k[1])]); });
+  return out;
+}
+
+/* ---------- gravação ---------- */
+const timers = {}, queues = {};
+function setSaved(k, e) { const el = $("#saved"); el.className = "saved" + (k === "err" ? " err" : ""); el.textContent = k === "saving" ? "salvando…" : k === "ok" ? "salvo" : "erro ao salvar (" + (e?.code || "?") + ")"; }
+function schedule(id, now) {
+  clearTimeout(timers[id]);
+  const go = () => { setSaved("saving"); queues[id] = (queues[id] || Promise.resolve()).then(() => db.doc("reviews/" + id).set(S.rev[id])).then(() => setSaved("ok")).catch(e => setSaved("err", e)); };
+  if (now) go(); else timers[id] = setTimeout(go, 500);
+}
+function edit(c, patch, o = {}) {
+  const cu = S.rev[c.id] || {vid: c.vid, i: c.i, action: null, cuts: [], tags: [], detail: "", note: "", trimIn: c.start, trimOut: c.end};
+  const n = {...cu, ...patch};
+  n.agree = !!n.action && n.action === c.sug?.action && !n.cuts.length && Math.abs(n.trimIn - c.start) < 0.011 && Math.abs(n.trimOut - c.end) < 0.011;
+  n.at = Date.now();
+  S.rev[c.id] = n;
+  schedule(c.id, !!o.now);
+  renderList(); renderTop();
+  if (o.struct) renderDetail(); else renderBar();
+}
+
+/* ---------- topo ---------- */
+function renderTop() {
+  const ch = S.chunks, n = ch.length;
+  const done = ch.filter(c => R(c)?.action).length;
+  const agreed = ch.filter(c => R(c)?.agree).length;
+  $("#s-rev").textContent = done + "/" + n;
+  $("#s-agree").textContent = done ? Math.round(100 * agreed / done) + "%" : "–";
+  const orig = ch.reduce((s, c) => s + (c.end - c.start), 0);
+  const fin = ch.reduce((s, c) => { const e = eff(c); const act = e.action || c.sug?.action; if (act === "remover") return s; return s + Math.max(0, e.b - e.a - e.cuts.reduce((x, k) => x + Math.max(0, k[1] - k[0]), 0)); }, 0);
+  $("#s-dur").textContent = n ? dur(fin) : "–";
+  $("#s-dur").title = "chunks mantidos (sugestão do Claude onde você ainda não decidiu), de " + dur(orig) + " de fala";
+  $("#progbar").style.width = n ? (100 * done / n) + "%" : "0";
+  const vid = S.videos.find(x => x.id === S.vid);
+  $("#vtitle").textContent = vid ? vid.title + " · " + dur(vid.duration) + " · silêncio > " + (vid.minSil ?? 0.7) + "s" : "";
+  $("#finish").hidden = !vid; $("#finish").disabled = !done;
+  $("#finish").textContent = vid?.doneAt ? "Concluída — reabrir" : "Concluir rodada";
+  const db_ = $("#donebox");
+  db_.hidden = !vid?.doneAt;
+  db_.textContent = vid?.doneAt ? "Rodada concluída. Avise o Claude no chat: ele lê as suas decisões direto daqui." : "";
+}
+
+/* ---------- lista ---------- */
+function pillDot(a, filled) { return a ? `<span class="dot ${cls(a)} ${filled ? "fill" : ""}" title="${esc(LABEL[a])}"><b>${esc({"manter":"M","remover":"R","motion":"mo","imagem":"im","imagem+motion":"i+m"}[a])}</b></span>` : `<span class="dot empty"></span>`; }
+function renderList() {
+  const only = $("#o-pend").checked;
+  $("#list").innerHTML = S.chunks.map((c, k) => {
+    const r = R(c); if (only && r?.action && k !== S.sel) return "";
+    const mk = r?.action ? (r.agree ? `<span class="mark ok" title="concordou">✓</span>` : `<span class="mark no" title="diferente da sugestão">≠</span>`) : `<span class="mark"></span>`;
+    return `<button class="row ${k === S.sel ? "sel" : ""}" data-k="${k}"><span class="n">${c.i}</span><span class="t"><b>${fmt(c.start)} · ${(c.end - c.start).toFixed(1)}s</b><span>${esc(c.text || "(sem texto)")}</span></span><span class="st">${pillDot(c.sug?.action, false)}${mk}${pillDot(r?.action, true)}</span></button>`;
+  }).join("");
+  const sel = $("#list .row.sel"); if (sel) sel.scrollIntoView({block: "nearest"});
+}
+
+/* ---------- detalhe ---------- */
+function renderDetail() {
+  const c = cur(); if (!c) return;
+  const r = R(c), e = eff(c);
+  $("#ch-title").textContent = "Chunk " + c.i + " de " + S.chunks.length;
+  $("#ch-time").textContent = fmt(c.start) + " → " + fmt(c.end) + " · " + (c.end - c.start).toFixed(1) + " s";
+  const s = c.sug;
+  $("#sug").innerHTML = s ? `<div><small>Sugestão do Claude</small><span class="pill ${cls(s.action)}">${esc(LABEL[s.action] || s.action)}</span></div><p>${esc(s.why || "")}${s.detail ? `<br><span class="hint">${esc(s.detail)}</span>` : ""}</p>` : `<p class="hint">Sem sugestão para este chunk.</p>`;
+  $("#text").textContent = c.text || ""; $("#text").hidden = !c.text;
+  $("#acts").innerHTML = ACTIONS.map(([k, l, key]) => `<button class="act ${cls(k)} ${e.action === k ? "on" : ""} ${s?.action === k ? "sugg" : ""}" data-a="${k}">${esc(l)}<kbd>${key}</kbd></button>`).join("");
+  $("#tags").innerHTML = TAGS.map(t => `<button class="tag ${(r?.tags || []).includes(t) ? "on" : ""}" data-t="${esc(t)}">${esc(t)}</button>`).join("");
+  const act = e.action, wantsMotion = act === "motion" || act === "imagem+motion", wantsImg = act === "imagem" || act === "imagem+motion";
+  $("#f-detail").hidden = !(wantsMotion || wantsImg);
+  $("#l-detail").textContent = wantsMotion && wantsImg ? "Qual imagem e qual motion?" : wantsMotion ? "Qual motion entra aqui?" : "Qual imagem entra aqui?";
+  $("#detail").value = r?.detail || "";
+  $("#imgbox").hidden = !wantsImg || !(c.sug?.images?.length || r?.imageAsset || assets);
+  renderImgs(c);
+  $("#note").value = r?.note || "";
+  $("#n-in").value = e.a.toFixed(2); $("#n-out").value = e.b.toFixed(2);
+  $("#cuts").innerHTML = e.cuts.map((k, j) => `<div class="cutrow">✂ cortar <input class="num" type="number" step="0.05" data-j="${j}" data-w="0" value="${k[0].toFixed(2)}"> até <input class="num" type="number" step="0.05" data-j="${j}" data-w="1" value="${k[1].toFixed(2)}"><span class="mono">(${(k[1] - k[0]).toFixed(2)}s)</span><button class="btn" data-hear="${j}">ouvir ao redor</button><button class="btn" data-del="${j}">desfazer corte</button></div>`).join("");
+  renderBar();
+}
+function renderImgs(c) {
+  const r = R(c), list = (c.sug?.images || []).map(m => ({id: m.assetId, label: m.label || ""}));
+  if (r?.imageAsset && !list.some(m => m.id === r.imageAsset)) list.push({id: r.imageAsset, label: "minha imagem"});
+  $("#imgs").innerHTML = list.map(m => `<button class="im ${r?.imageChoice === m.id ? "on" : ""}" data-im="${esc(m.id)}"><img alt="" src="/_blob/${esc(m.id)}" loading="lazy"><span>${esc(m.label)}</span></button>`).join("");
+}
+function renderBar() {
+  const c = cur(); if (!c) return;
+  const e = eff(c), {lo, hi} = range(c), p = t => 100 * (t - lo) / (hi - lo);
+  $("#bar").classList.toggle("removed", e.action === "remover");
+  const kept = $("#b-kept"), ka = Math.max(0, p(e.a)), kb = Math.min(100, p(e.b)); kept.style.left = ka + "%"; kept.style.width = Math.max(0, kb - ka) + "%";
+  $("#b-cuts").innerHTML = e.cuts.map(k => { const a = Math.max(0, p(k[0])), b = Math.min(100, p(k[1])); return b > a ? `<div class="cut" style="left:${a}%;width:${b - a}%"></div>` : ""; }).join("");
+  $("#h-in").style.left = p(e.a) + "%"; $("#h-out").style.left = p(e.b) + "%";
+  $("#h-in").hidden = p(e.a) < -1 || p(e.a) > 101; $("#h-out").hidden = p(e.b) < -1 || p(e.b) > 101;
+  const pe = $("#b-pend"); pe.hidden = S.pend == null; if (S.pend != null) pe.style.left = p(S.pend) + "%";
+  const rg = S.region, se = $("#b-sel"); se.hidden = !rg;
+  if (rg) { const a = Math.max(0, p(rg.a)), b = Math.min(100, p(rg.b)); se.style.left = a + "%"; se.style.width = Math.max(0, b - a) + "%"; }
+  $("#b-cutsel").disabled = !rg; $("#b-hearsel").disabled = !rg;
+  $("#t-lo").textContent = fmt(lo); $("#t-hi").textContent = fmt(hi);
+  $("#z-info").textContent = "janela " + (hi - lo).toFixed(1) + " s" + (rg ? " · seleção " + (rg.b - rg.a).toFixed(2) + " s" : "");
+  drawWave();
+  const ni = $("#n-in"), no = $("#n-out");
+  if (document.activeElement !== ni) ni.value = e.a.toFixed(2);
+  if (document.activeElement !== no) no.value = e.b.toFixed(2);
+  $("#b-cut").textContent = S.pend == null ? "✂ Marcar corte no player" : "✂ Fim do corte aqui";
+}
+function setPeaks(b64) {
+  if (!b64) { PK = null; return; }
+  const s = atob(b64); PK = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) PK[i] = s.charCodeAt(i);
+}
+function drawWave() {
+  const cv = $("#wave"), c = cur(), bar = $("#bar"); if (!c) return;
+  const d = window.devicePixelRatio || 1, W = Math.round(bar.clientWidth * d), H = Math.round(bar.clientHeight * d);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const g = cv.getContext("2d"); g.clearRect(0, 0, W, H); if (!PK || !W) return;
+  const {lo, hi} = range(c), cs = getComputedStyle(document.documentElement), fg = cs.getPropertyValue("--fg").trim() || "#333", mu = cs.getPropertyValue("--muted").trim() || "#999";
+  g.fillStyle = mu; g.globalAlpha = 0.25; g.fillRect(0, H / 2, W, 1); g.globalAlpha = 1;
+  for (let x = 0; x < W; x++) {
+    const i0 = Math.floor((lo + (hi - lo) * x / W) * PR), i1 = Math.max(i0 + 1, Math.ceil((lo + (hi - lo) * (x + 1) / W) * PR));
+    let m = 0; for (let i = i0; i < i1 && i < PK.length; i++) if (PK[i] > m) m = PK[i];
+    const a = Math.max(0.5, m / 255 * H * 0.48);
+    g.fillStyle = m >= THR ? fg : mu; g.globalAlpha = m >= THR ? 0.9 : 0.45;
+    g.fillRect(x, H / 2 - a, 1, a * 2);
+  }
+  g.globalAlpha = 1;
+}
+function zoom(f) {
+  const c = cur(); if (!c) return; const {lo, hi} = range(c), t = v.currentTime, mid = t >= lo && t <= hi ? t : (lo + hi) / 2, w = Math.min(S.duration, Math.max(0.5, (hi - lo) * f));
+  let a = mid - w * (mid - lo) / (hi - lo); a = Math.max(0, Math.min(S.duration - w, a)); S.view = {lo: a, hi: a + w}; renderBar();
+}
+function pan(f) { const c = cur(); if (!c) return; const {lo, hi} = range(c), w = hi - lo, a = Math.max(0, Math.min(S.duration - w, lo + w * f)); S.view = {lo: a, hi: a + w}; renderBar(); }
+
+/* ---------- player ---------- */
+function select(k, play) {
+  S.sel = Math.max(0, Math.min(S.chunks.length - 1, k)); S.pend = null; S.view = null; S.region = null; S.selStop = null;
+  const c = cur(); if (!c) return;
+  renderList(); renderDetail();
+  v.currentTime = eff(c).a;
+  if (play) v.play().catch(() => {});
+}
+function playhead() {
+  const c = cur(); if (c) { const {lo, hi} = range(c); $("#b-play").style.left = (100 * (v.currentTime - lo) / (hi - lo)) + "%"; }
+  $("#b-play-btn").firstChild.textContent = v.paused ? "▶ Tocar " : "⏸ Pausar ";
+}
+function nextPlayable(from) { for (let k = from + 1; k < S.chunks.length; k++) { const a = eff(S.chunks[k]).action || S.chunks[k].sug?.action; if (a !== "remover") return k; } return -1; }
+function tick() {
+  const c = cur();
+  if (c && !v.paused) {
+    const e = eff(c), t = v.currentTime, {hi} = full(c);
+    const cut = S.selStop == null && $("#o-skip").checked && e.cuts.find(k => t >= k[0] && t < k[1]);
+    if (S.view && (t > S.view.hi - (S.view.hi - S.view.lo) * 0.08 || t < S.view.lo)) pan((t - S.view.lo - (S.view.hi - S.view.lo) * 0.2) / (S.view.hi - S.view.lo));
+    if (S.selStop != null) { if (t >= S.selStop) { v.pause(); S.selStop = null; } }
+    else if (cut) v.currentTime = cut[1];
+    else if (S.startedInside && t >= e.b) {
+      if ($("#o-seq").checked) { const k = nextPlayable(S.sel); if (k >= 0) { select(k, true); } else v.pause(); } else v.pause();
+    } else if (t >= hi) v.pause();
+  }
+  playhead(); requestAnimationFrame(tick);
+}
+v.addEventListener("play", () => { const c = cur(); if (!c) return; const e = eff(c); S.startedInside = v.currentTime >= e.a - 0.03 && v.currentTime < e.b; });
+v.addEventListener("pause", () => { if (v.currentTime < (S.selStop ?? 0) - 0.05) S.selStop = null; });
+function toggle() { const c = cur(); if (!c) return; S.selStop = null; if (v.paused) { const e = eff(c); if (v.currentTime >= e.b - 0.05 && v.currentTime <= e.b + 0.2) v.currentTime = e.a; v.play().catch(() => {}); } else v.pause(); }
+function hear(a, b) { S.selStop = b; S.startedInside = false; v.currentTime = a; v.play().catch(() => {}); }
+function hearRegion() { if (S.region) hear(S.region.a, S.region.b); }
+function cutRegion() {
+  const c = cur(), rg = S.region; if (!c || !rg || rg.b - rg.a < 0.03) return;
+  S.region = null; edit(c, {cuts: mergeCuts([...eff(c).cuts, [rg.a, rg.b]])}, {struct: true, now: true});
+}
+function replay() { const c = cur(); if (!c) return; S.selStop = null; v.currentTime = eff(c).a; v.play().catch(() => {}); }
+
+/* ---------- ações ---------- */
+function setAction(a) { const c = cur(); if (!c) return; edit(c, {action: a}, {now: true, struct: true}); }
+function accept() { const c = cur(); if (!c || !c.sug) return; edit(c, {action: c.sug.action}, {now: true, struct: true}); if (S.sel < S.chunks.length - 1) select(S.sel + 1, false); }
+function setIn(t) { const c = cur(), e = eff(c); edit(c, {trimIn: r2(Math.min(t, e.b - 0.1))}); }
+function setOut(t) { const c = cur(), e = eff(c); edit(c, {trimOut: r2(Math.max(t, e.a + 0.1))}); }
+function markCut() {
+  const c = cur(); if (!c) return; const t = r2(v.currentTime);
+  if (S.pend == null) { S.pend = t; renderBar(); return; }
+  const a = Math.min(S.pend, t), b = Math.max(S.pend, t); S.pend = null;
+  if (b - a < 0.03) { renderBar(); return; }
+  edit(c, {cuts: mergeCuts([...eff(c).cuts, [a, b]])}, {struct: true, now: true});
+}
+
+$("#b-in").onclick = () => setIn(v.currentTime); $("#b-out").onclick = () => setOut(v.currentTime); $("#b-cut").onclick = markCut;
+$("#b-play-btn").onclick = toggle; $("#b-replay").onclick = replay;
+$("#b-prev").onclick = () => select(S.sel - 1, false); $("#b-next").onclick = () => select(S.sel + 1, false);
+$("#n-in").onchange = e => setIn(parseFloat(e.target.value) || 0); $("#n-out").onchange = e => setOut(parseFloat(e.target.value) || 0);
+$("#acts").onclick = e => { const b = e.target.closest("[data-a]"); if (b) setAction(b.dataset.a); };
+$("#tags").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; const c = cur(), t = b.dataset.t, cs = R(c)?.tags || []; edit(c, {tags: cs.includes(t) ? cs.filter(x => x !== t) : [...cs, t]}, {now: true, struct: true}); };
+$("#detail").oninput = e => edit(cur(), {detail: e.target.value});
+$("#note").oninput = e => edit(cur(), {note: e.target.value});
+$("#cuts").onchange = e => { const i = e.target.closest("input[data-j]"); if (!i) return; const c = cur(), cs = eff(c).cuts.map(k => [...k]); cs[+i.dataset.j][+i.dataset.w] = parseFloat(i.value) || 0; edit(c, {cuts: cs.filter(k => k[1] - k[0] >= 0.03)}, {struct: true}); };
+$("#cuts").onclick = e => { const h = e.target.closest("[data-hear]"); if (h) { const k = eff(cur()).cuts[+h.dataset.hear]; if (k) { S.selStop = null; S.startedInside = false; v.currentTime = Math.max(0, k[0] - 0.6); v.play().catch(() => {}); S.selStop = k[1] + 0.6; } return; } const b = e.target.closest("[data-del]"); if (!b) return; const c = cur(); edit(c, {cuts: eff(c).cuts.filter((_, j) => j !== +b.dataset.del)}, {struct: true, now: true}); };
+$("#list").onclick = e => { const b = e.target.closest("[data-k]"); if (b) select(+b.dataset.k, false); };
+$("#o-pend").onchange = renderList;
+$("#imgs").onclick = e => { const b = e.target.closest("[data-im]"); if (!b) return; const c = cur(); edit(c, {imageChoice: R(c)?.imageChoice === b.dataset.im ? null : b.dataset.im}, {now: true}); renderImgs(c); };
+$("#upimg").onclick = () => $("#upfile").click();
+$("#upfile").onchange = async e => {
+  const f = e.target.files[0]; if (!f || !assets) return;
+  try { const up = await assets.upload(f); const c = cur(); edit(c, {imageAsset: up.id, imageChoice: up.id}, {now: true}); renderImgs(c); }
+  catch (err) { setSaved("err", err); }
+  e.target.value = "";
+};
+$("#finish").onclick = async () => { const vid = S.videos.find(x => x.id === S.vid); if (!vid) return; try { await db.doc("videos/" + vid.id).update({doneAt: vid.doneAt ? null : Date.now()}); } catch (err) { setSaved("err", err); } };
+$("#vsel").onchange = e => openVideo(e.target.value);
+
+/* arrastar início/fim e clicar na barra */
+const bar = $("#bar");
+const tAt = ev => { const c = cur(), {lo, hi} = range(c), b = bar.getBoundingClientRect(); return r2(lo + (hi - lo) * Math.min(1, Math.max(0, (ev.clientX - b.left) / b.width))); };
+let drag = null, bg = null; /* drag = alça (h-in/h-out); bg = arrasto no fundo: seleciona um trecho, ou só move o player se não arrastar */
+bar.addEventListener("pointerdown", ev => {
+  if (!cur()) return;
+  const h = ev.target.closest(".h"); bar.setPointerCapture(ev.pointerId);
+  if (h) { drag = h.id; bg = null; } else { drag = null; bg = {x: ev.clientX, t: tAt(ev), moved: false}; }
+});
+bar.addEventListener("pointermove", ev => {
+  if (!(ev.buttons & 1)) return;
+  if (drag) { const t = tAt(ev); if (drag === "h-in") setIn(t); else setOut(t); return; }
+  if (bg && (bg.moved || Math.abs(ev.clientX - bg.x) > 4)) { bg.moved = true; const t = tAt(ev); S.region = {a: Math.min(bg.t, t), b: Math.max(bg.t, t)}; renderBar(); }
+});
+bar.addEventListener("pointerup", () => {
+  if (drag) { const c = cur(); schedule(c.id, true); renderDetail(); }
+  else if (bg && !bg.moved) { S.region = null; S.selStop = null; v.currentTime = bg.t; renderBar(); }
+  drag = null; bg = null;
+});
+$("#b-cutsel").onclick = cutRegion; $("#b-hearsel").onclick = hearRegion;
+$("#z-in").onclick = () => zoom(0.5); $("#z-out").onclick = () => zoom(2); $("#z-fit").onclick = () => { S.view = null; renderBar(); };
+$("#z-l").onclick = () => pan(-0.4); $("#z-r").onclick = () => pan(0.4);
+$("#help").onclick = () => { const m = $("#manual"); m.open = !m.open; if (m.open) m.scrollIntoView({block: "start"}); };
+$("#manual").ontoggle = () => { try { localStorage.setItem("manual-visto", "1"); } catch (e) {} };
+try { if (!localStorage.getItem("manual-visto")) $("#manual").open = true; } catch (e) { $("#manual").open = true; }
+window.addEventListener("resize", drawWave);
+
+document.addEventListener("keydown", ev => {
+  if (ev.target.closest("input,textarea,select") || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const k = ev.key.toLowerCase();
+  if (k === "arrowright" || k === "j") select(S.sel + 1, false);
+  else if (k === "arrowleft" || k === "k") select(S.sel - 1, false);
+  else if (k === " ") toggle();
+  else if (k === "enter") accept();
+  else if (k === "r") replay();
+  else if (k === "i") setIn(v.currentTime);
+  else if (k === "o") setOut(v.currentTime);
+  else if (k === "x") { if (S.region) cutRegion(); else markCut(); }
+  else if (k === "delete" || k === "backspace") { if (!S.region) return; cutRegion(); }
+  else if (k === "s") hearRegion();
+  else if (k === "+" || k === "=") zoom(0.5);
+  else if (k === "-") zoom(2);
+  else if (k === "0") { S.view = null; renderBar(); }
+  else if (/^[1-5]$/.test(k)) setAction(ACTIONS[+k - 1][0]);
+  else return;
+  ev.preventDefault();
+});
+
+/* ---------- dados ---------- */
+function openVideo(id) {
+  unsubs.forEach(u => u()); unsubs = [];
+  S.vid = id; S.chunks = []; S.rev = {}; S.sel = 0;
+  const vid = S.videos.find(x => x.id === id); if (!vid) return;
+  S.duration = vid.duration; setPeaks(vid.peaks);
+  $("#empty").hidden = true; $("#app").hidden = false;
+  if (!v.src || !v.src.endsWith("/_blob/" + vid.assetId)) v.src = "/_blob/" + vid.assetId;
+  let first = true;
+  unsubs.push(db.collection("chunks").where("vid", "==", id).onSnapshot(snap => {
+    S.chunks = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => a.i - b.i);
+    renderTop(); renderList();
+    if (first && S.chunks.length) { first = false; select(0, false); }
+  }, onErr));
+  unsubs.push(db.collection("reviews").where("vid", "==", id).onSnapshot(snap => {
+    snap.docs.forEach(d => { if (!queues[d.id] || !timers[d.id]) { if (!S.rev[d.id] || !timers[d.id]) S.rev[d.id] = d.data(); } });
+    renderTop(); renderList();
+    if (cur() && !document.activeElement?.closest?.("input,textarea")) renderDetail();
+  }, onErr));
+}
+function onErr(e) { $("#vtitle").textContent = "erro ao ler o banco (" + (e?.code || "?") + ")"; }
+
+db.collection("videos").onSnapshot(snap => {
+  S.videos = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const sel = $("#vsel"); sel.hidden = S.videos.length < 2;
+  sel.innerHTML = S.videos.map(x => `<option value="${esc(x.id)}">${esc(x.title)}</option>`).join("");
+  if (!S.videos.length) { $("#empty").hidden = false; $("#app").hidden = true; $("#vtitle").textContent = "aguardando vídeo"; return; }
+  if (!S.vid || !S.videos.some(x => x.id === S.vid)) { sel.value = S.videos[0].id; openVideo(S.videos[0].id); }
+  else { renderTop(); const vv = S.videos.find(x => x.id === S.vid); if (vv?.peaks && !PK) { setPeaks(vv.peaks); renderBar(); } }
+}, onErr);
+
+requestAnimationFrame(tick);
+})();
+</script>

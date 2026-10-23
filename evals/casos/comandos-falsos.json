@@ -1,0 +1,45 @@
+{
+ "nome": "comandos falsos (só regras, sem gabarito)",
+ "edit": "gravações/short form/comandos falsos/edit",
+ "clip": "VID_20261013_162529",
+ "video": "gravações/short form/comandos falsos/edit/VID_20261013_162529-enhanced.mp4",
+ "audio": "gravações/short form/comandos falsos/edit/audio/VID_20261013_162529-enhanced.mp3",
+ "gabarito": null,
+ "overrides": {
+  "cortar": {
+   "36": "fragmento 'Então, por exemplo,' recomeçado em 227.8s",
+   "44": "fechamento refeito em 268.2s (última gravação); perde 'Sou Pedro Fux' - avisar o Pedro",
+   "40": "pergunta 'o comando barra viral existe de fato...' regravada em 235.2s (última gravação)",
+   "45": "'Me segue.' solta: retake do CTA refeito em 273.3s (pedido do Pedro 17/10)",
+   "39": "'Então, um exemplo,' abertura solta, pergunta regravada em 235.2s (pedido do Pedro 17/10)",
+   "47": "CTA duplicado: fica o do fim do vídeo (pedido do Pedro 17/10)",
+   "48": "CTA duplicado: fica o do fim do vídeo (pedido do Pedro 17/10)",
+   "37": "'Ei, ChatGPT,' truncado antes da pergunta final de 235.2s; texto isolado sai garbled ('e ICHPT') e o detector não casa (pedido do Pedro 17/10)",
+   "12": "introdução do exemplo repetida: o parágrafo recomeça em 88.2s 'Se eu já estou conversando...' (pedido do Pedro 18/10)",
+   "13": "introdução do exemplo repetida: o parágrafo recomeça em 88.2s 'Se eu já estou conversando...' (pedido do Pedro 18/10)",
+   "14": "introdução do exemplo repetida: o parágrafo recomeça em 88.2s 'Se eu já estou conversando...' (pedido do Pedro 18/10)",
+   "32": "interjeição 'Meu irmão...' fora do roteiro (pedido do Pedro 18/10)",
+   "26": "'E isso é crítico para quando você está trabalhando com um agente de IA.' frase vazia, repete a abertura 'E isso' (pedido do Pedro 18/10)",
+   "34": "'que tenha pesquisa na web,' 3ª menção de pesquisa web na mesma lista (pedido do Pedro 18/10)"
+  },
+  "manter": {},
+  "aparar_inicio": {
+   "17": [
+    4,
+    "'Então, um exemplo aqui.' repete a abertura de 36.6s (pedido do Pedro 17/10)"
+   ],
+   "49": [
+    11,
+    "'É isso aí que eu tinha para falar hoje, pessoal, e' enchimento antes do CTA; começa em 'Me segue' (302.81s, conferido com whisper isolado: 302.78 ainda tem o 'e', 302.61 tem o fim de 'pessoal') (pedido do Pedro 18/10)",
+    302.81
+   ]
+  },
+  "remover": [
+   [
+    167.43,
+    170.65,
+    "'só para vocês terem uma noção do que está acontecendo, ok?' enchimento (pedido do Pedro 18/10)"
+   ]
+  ]
+ }
+}

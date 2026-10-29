@@ -12,6 +12,8 @@ Pastas: `<edit>` = pasta `edit/` do vídeo; `<pasta>` = `<edit>/evals-edicao/`.
 1. **Preparar** — `python3 ferramentas/evals-edicao/preparar.py <video.mp4> -a <audio.mp3> -o <pasta>`
    Detecta silêncio >0,7 s a −40 dB (`--min-sil` muda), monta os chunks (cada chunk = fala entre silêncios, com 0,08 s de respiro), calcula a onda e faz o proxy 480p. Saída: `chunks.json` (inclui `peaks`), `proxy.mp4`. `--texto` transcreve cada chunk isolado (whisper-cli large-v3, lento); **por padrão não transcreve** (a legenda só nasce depois do corte final, Pedro 22/10/2026). Sem texto, as sugestões de retake por conteúdo ficam sem base: usar `--texto` quando for preciso eu sugerir retakes.
 2. **Sugestões** — o agente escreve `<pasta>/sugestoes.json`: `{"1": {"action": "manter", "why": "motivo curto", "detail": "o que entra (opcional)"}}`. Ações: `manter`, `remover`, `motion`, `imagem`, `imagem+motion`. Aplicar os aprendizados de `memory/evals-edicao-manual.md` (pausa interna, tomada truncada, imagem sempre com motion).
+2b. **Imagens (proativo)** — pra cada chunk com `imagem`/`imagem+motion`, rodar a busca de `ferramentas/buscar-imagens/README.md`, subir os assets e `juntar` em `sugestoes.json` (`images`). A página mostra as opções; o Pedro escolhe.
+2c. **Opções de motion (Pedro, 26/10/2026)** — pra cada chunk `motion`/`imagem+motion`, escrever em `sugestoes.json` `motions`: 4 opções `{label, desc, timing}` (formatos diferentes entre si; ilustração, não só pill de texto; `desc` diz o que aparece; `timing` ancora os beats na fala do chunk, ex. "0–1 s desenha; 2 s X"; respeitar a zona livre acima da cabeça e o hook sem tela cheia). A página mostra 4 cartões; o Pedro escolhe (teclas 6–9) e a escolha volta em `reviews`: `motionChoice` (0–3), `motionLabel`, `motionDesc`. `anotar.py` copia pra `anotacoes.*`. Substitui a entrevista de motion no chat.
 3. **Semear** — `python3 ferramentas/evals-edicao/semear.py <pasta> --vid <slug> --titulo "Nome" --asset <id>`.
    Antes: subir o proxy com `Artifact` (`url` do artifact, `asset: true`, `file_path` = `proxy.mp4`) e pegar o `id` do resultado. Depois: `ArtifactData batch` com o conteúdo de `<pasta>/seed/writes.json` (até 50 escritas por chamada; mais de 49 chunks = mais de uma chamada).
 4. **Pedro revisa** na página e avisa no chat ("terminei"). Ele não precisa clicar em "Concluir rodada" (grava `videos/<vid>.doneAt`, opcional).
@@ -21,8 +23,8 @@ Pastas: `<edit>` = pasta `edit/` do vídeo; `<pasta>` = `<edit>/evals-edicao/`.
 
 ## Modelo de dados (banco do artifact)
 - `videos/<vid>`: `title, assetId` (proxy), `duration, minSil, peaks` (base64, 1 byte por 10 ms, 0 = −60 dB e 255 = 0 dB), `createdAt, n, doneAt?`.
-- `chunks/<vid>_NNN` (escrito pelo Claude): `vid, i, start, end, text, sug: {action, why, detail?, images?: [{assetId, label}]}`. Tempos em segundos do raw.
-- `reviews/<vid>_NNN` (escrito pela página): `vid, i, action, agree, trimIn, trimOut, cuts: [[ini, fim]], tags[], detail, note, imageChoice?, imageAsset?, at`. `agree` = ação igual à sugestão **e** sem ajuste de borda **e** sem corte. Chunk sem `review` = não revisado.
+- `chunks/<vid>_NNN` (escrito pelo Claude): `vid, i, start, end, text, sug: {action, why, detail?, images?: [{assetId, label}], motions?: [{label, desc, timing?}]}`. Tempos em segundos do raw.
+- `reviews/<vid>_NNN` (escrito pela página): `vid, i, action, agree, trimIn, trimOut, cuts: [[ini, fim]], tags[], detail, note, imageChoice?, imageAsset?, motionChoice?, motionLabel?, motionDesc?, at`. `agree` = ação igual à sugestão **e** sem ajuste de borda **e** sem corte. Chunk sem `review` = não revisado.
 - Um doc por chunk, nunca arrays grandes (limite de 256 KiB por doc; `peaks` cabe até ~30 min de vídeo).
 
 ## O que a página faz

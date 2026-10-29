@@ -69,3 +69,7 @@ python3 evals/evals.py run evals/casos/comandos-falsos.json               # test
 ## Repos relacionados
 
 Do kit do [@SafeMantella](https://github.com/SafeMantella): [transcrever-ptbr](https://github.com/SafeMantella/transcrever-ptbr) (entrada), [video-tools](https://github.com/SafeMantella/video-tools) (camadas, zoom e sfx depois do corte), [sau-tools](https://github.com/SafeMantella/sau-tools) (postar o resultado), [social-toolbox](https://github.com/SafeMantella/social-toolbox), [token-kit](https://github.com/SafeMantella/token-kit).
+
+## Licença
+
+MIT. Veja [LICENSE](LICENSE).

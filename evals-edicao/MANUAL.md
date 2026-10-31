@@ -6,7 +6,8 @@ Artifact: https://claude.ai/artifact/NqVcLsVRQivvEDy9rHJNnr (o mesmo texto está
 - Lista à direita: cada item é um chunk, um trecho de fala entre silêncios maiores que 0,7 s. O círculo tracejado é a sugestão do Claude, o cheio é a sua decisão, ✓ quer dizer que você concordou e ≠ que decidiu diferente.
 - Ouça com espaço. Leia a sugestão do Claude e o motivo.
 - Decida: teclas 1 manter · 2 remover · 3 motion · 4 imagem · 5 imagem + motion. Enter aceita a sugestão e vai pro próximo.
-- Motion ou imagem: escreva no campo que aparece o que entraria ali. Pode enviar uma imagem sua.
+- Motion: ao marcar motion ou imagem + motion aparecem 4 opções de animação (com o tempo de cada beat). Clique na que quiser, ou teclas 6 a 9. Nenhuma serve: descreva no campo "Qual motion entra aqui?".
+- Imagem: escolha uma das opções ou envie uma sua.
 - Por quê: marque as tags (retake, enchimento, erro de fala...) e deixe uma nota quando discordar. É isso que ensina o Claude.
 - Terminou? Clique em “Concluir rodada” e avise o Claude no chat. Ele lê tudo direto daqui.
 

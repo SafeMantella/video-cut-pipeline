@@ -100,6 +100,13 @@ video{display:block;max-width:100%;max-height:min(52vh,460px);background:#000}
 .field label,.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
 .field input,.field textarea{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%}
 .field textarea{min-height:64px;resize:vertical}
+.mopts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px}
+.mo{background:var(--surface);border:2px solid var(--line);border-radius:8px;padding:9px 11px;text-align:left;display:flex;flex-direction:column;gap:3px}
+.mo kbd{font:500 11px var(--font-mono);color:var(--muted)}
+.mo b{font:600 13px var(--font-display)}
+.mo span{font-size:12.5px;color:var(--fg)}
+.mo em{font-style:normal;font:400 11.5px var(--font-mono);color:var(--muted)}
+.mo.on{border-color:var(--amber);background:color-mix(in srgb,var(--amber) 16%,var(--surface))}
 .imgs{display:flex;gap:8px;flex-wrap:wrap}
 .imgs .im{width:112px;border:2px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface);padding:0;text-align:left}
 .imgs .im.on{border-color:var(--amber)}
@@ -155,7 +162,8 @@ video{display:block;max-width:100%;max-height:min(52vh,460px);background:#000}
     <li><b>Lista à direita:</b> cada item é um chunk, um trecho de fala entre silêncios maiores que 0,7 s. O círculo tracejado é a sugestão do Claude, o cheio é a sua decisão, ✓ quer dizer que você concordou e ≠ que decidiu diferente.</li>
     <li><b>Ouça</b> com espaço. Leia a sugestão do Claude e o motivo.</li>
     <li><b>Decida:</b> teclas <kbd>1</kbd> manter · <kbd>2</kbd> remover · <kbd>3</kbd> motion · <kbd>4</kbd> imagem · <kbd>5</kbd> imagem + motion. <kbd>Enter</kbd> aceita a sugestão e vai pro próximo.</li>
-    <li><b>Motion ou imagem:</b> escreva no campo que aparece o que entraria ali. Pode enviar uma imagem sua.</li>
+    <li><b>Motion:</b> quando você marca motion ou imagem + motion, o Claude já traz 4 opções de animação pra aquele trecho (com o tempo de cada beat). Clique na que quiser, ou use <kbd>6</kbd>–<kbd>9</kbd>. Nenhuma serve? Descreva no campo “Qual motion…”.</li>
+    <li><b>Imagem:</b> escolha uma das opções ou envie uma sua.</li>
     <li><b>Por quê:</b> marque as tags (retake, enchimento, erro de fala...) e deixe uma nota quando discordar. É isso que ensina o Claude.</li>
     <li><b>Terminou?</b> Clique em “Concluir rodada” e avise o Claude no chat. Ele lê tudo direto daqui.</li>
   </ol>
@@ -233,6 +241,10 @@ video{display:block;max-width:100%;max-height:min(52vh,460px);background:#000}
     </div>
     <div><div class="lbl" style="margin-bottom:6px">Por quê (opcional)</div><div class="tags" id="tags"></div></div>
     <div class="field" id="f-detail" hidden><label for="detail" id="l-detail"></label><input id="detail" type="text" autocomplete="off"></div>
+    <div id="mbox" hidden>
+      <div class="lbl" style="margin-bottom:6px">Motion: escolha 1 das 4 opções <span class="hint" style="text-transform:none;letter-spacing:0">· teclas 6–9 · clique de novo desmarca · nenhuma serve: descreva no campo acima</span></div>
+      <div class="mopts" id="mopts"></div>
+    </div>
     <div id="imgbox" hidden>
       <div class="lbl" style="margin-bottom:6px">Imagem</div>
       <div class="imgs" id="imgs"></div>
@@ -245,7 +257,7 @@ video{display:block;max-width:100%;max-height:min(52vh,460px);background:#000}
   <aside class="side">
     <h3><span>Chunks</span><label class="hint"><input type="checkbox" id="o-pend"> só pendentes</label></h3>
     <div class="list" id="list"></div>
-    <div class="hint">Atalhos: ←/→ navega · 1–5 ação · Enter aceita sugestão · espaço toca · I/O início/fim · X corta trecho (aperte no começo e de novo no fim)</div>
+    <div class="hint">Atalhos: ←/→ navega · 1–5 ação · 6–9 opção de motion · Enter aceita sugestão · espaço toca · I/O início/fim · X corta trecho (aperte no começo e de novo no fim)</div>
   </aside>
 </main>
 
@@ -357,6 +369,9 @@ function renderDetail() {
   $("#detail").value = r?.detail || "";
   $("#imgbox").hidden = !wantsImg || !(c.sug?.images?.length || r?.imageAsset || assets);
   renderImgs(c);
+  const mo = c.sug?.motions || [];
+  $("#mbox").hidden = !(wantsMotion && mo.length);
+  $("#mopts").innerHTML = mo.map((m, k) => `<button class="mo ${r?.motionChoice === k ? "on" : ""}" data-mo="${k}"><kbd>${k + 6}</kbd><b>${esc(m.label)}</b><span>${esc(m.desc)}</span>${m.timing ? `<em>${esc(m.timing)}</em>` : ""}</button>`).join("");
   $("#note").value = r?.note || "";
   $("#n-in").value = e.a.toFixed(2); $("#n-out").value = e.b.toFixed(2);
   $("#cuts").innerHTML = e.cuts.map((k, j) => `<div class="cutrow">✂ cortar <input class="num" type="number" step="0.05" data-j="${j}" data-w="0" value="${k[0].toFixed(2)}"> até <input class="num" type="number" step="0.05" data-j="${j}" data-w="1" value="${k[1].toFixed(2)}"><span class="mono">(${(k[1] - k[0]).toFixed(2)}s)</span><button class="btn" data-hear="${j}">ouvir ao redor</button><button class="btn" data-del="${j}">desfazer corte</button></div>`).join("");
@@ -476,6 +491,12 @@ $("#cuts").onchange = e => { const i = e.target.closest("input[data-j]"); if (!i
 $("#cuts").onclick = e => { const h = e.target.closest("[data-hear]"); if (h) { const k = eff(cur()).cuts[+h.dataset.hear]; if (k) { S.selStop = null; S.startedInside = false; v.currentTime = Math.max(0, k[0] - 0.6); v.play().catch(() => {}); S.selStop = k[1] + 0.6; } return; } const b = e.target.closest("[data-del]"); if (!b) return; const c = cur(); edit(c, {cuts: eff(c).cuts.filter((_, j) => j !== +b.dataset.del)}, {struct: true, now: true}); };
 $("#list").onclick = e => { const b = e.target.closest("[data-k]"); if (b) select(+b.dataset.k, false); };
 $("#o-pend").onchange = renderList;
+function pickMotion(k) {
+  const c = cur(), m = c?.sug?.motions?.[k]; if (!m) return;
+  const off = R(c)?.motionChoice === k;
+  edit(c, off ? {motionChoice: null, motionLabel: "", motionDesc: ""} : {motionChoice: k, motionLabel: m.label, motionDesc: m.desc}, {now: true, struct: true});
+}
+$("#mopts").onclick = e => { const b = e.target.closest("[data-mo]"); if (b) pickMotion(+b.dataset.mo); };
 $("#imgs").onclick = e => { const b = e.target.closest("[data-im]"); if (!b) return; const c = cur(); edit(c, {imageChoice: R(c)?.imageChoice === b.dataset.im ? null : b.dataset.im}, {now: true}); renderImgs(c); };
 $("#upimg").onclick = () => $("#upfile").click();
 $("#upfile").onchange = async e => {
@@ -531,6 +552,7 @@ document.addEventListener("keydown", ev => {
   else if (k === "-") zoom(2);
   else if (k === "0") { S.view = null; renderBar(); }
   else if (/^[1-5]$/.test(k)) setAction(ACTIONS[+k - 1][0]);
+  else if (/^[6-9]$/.test(k)) { if ($("#mbox").hidden) return; pickMotion(+k - 6); }
   else return;
   ev.preventDefault();
 });

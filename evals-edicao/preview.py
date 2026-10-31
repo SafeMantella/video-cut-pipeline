@@ -15,6 +15,7 @@ def segmentos(chunks, reviews):
         if not r or r["action"] == "remover": continue
         a, b = r.get("trimIn", c["start"]), r.get("trimOut", c["end"]); cur = a
         for s, e in sorted(r.get("cuts", [])):
+            s, e = min(s, b), min(e, b)  # corte além do trimOut não pode esticar o chunk (bug do chunk 30, 23/10/2026)
             if s - cur >= 0.03: out.append((cur, s))
             cur = max(cur, e)
         if b - cur >= 0.03: out.append((cur, b))
@@ -27,7 +28,7 @@ def main():
     pasta = pathlib.Path(x.pasta).resolve(); d = json.load(open(pasta / "chunks.json"))
     reviews = {r["i"]: r for r in (json.load(open(f)) for f in glob.glob(f"{x.reviews}/*.json"))}
     segs = segmentos(d["chunks"], reviews); video = pasta.parent / d["video"]
-    fps = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=r_frame_rate", "-of", "csv=p=0", str(video)], capture_output=True, text=True, check=True).stdout.strip().strip(",")
+    fps = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=avg_frame_rate", "-of", "csv=p=0", str(video)], capture_output=True, text=True, check=True).stdout.strip().strip(",")
     esc = "setpts=PTS-STARTPTS" if x.chop else "setpts=PTS-STARTPTS,scale=-2:960"
     f = []
     for n, (a, b) in enumerate(segs):

@@ -14,9 +14,8 @@ from difflib import SequenceMatcher
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 TRANSCREVER = ROOT / "ferramentas/transcrever/transcrever.py"
-os.environ.setdefault("WHISPER_CPP_BIN", "/opt/homebrew/bin/whisper-cli")
-os.environ.setdefault("WHISPER_CPP_MODEL", "/Volumes/1TB Mac/Code/Skills/local-video-use/models/ggml-large-v3.bin")
-os.environ.setdefault("WHISPER_VAD_MODEL", "/Volumes/1TB Mac/Code/Skills/local-video-use/models/ggml-silero-v5.1.2.bin")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "transcrever-ptbr"))  # repo irmão
+from voicestudio import transcrever_wav  # ASR local (VoiceStudio), motor ativo = whisperx
 
 # mesmos números do corte-silencio/cortes.py (regras fixas do Pedro)
 NOISE, MIN_SIL, FINE_SIL, END_PAD, START_PAD = "-50dB", 0.7, 0.3, 0.37, 0.12
@@ -60,10 +59,8 @@ def fala(audio, d):
     return out
 
 
-WHISPER, WMODEL = os.environ["WHISPER_CPP_BIN"], os.environ["WHISPER_CPP_MODEL"]
-
 def iso(src, spans, cache):
-    """Transcreve CADA trecho isolado (whisper-cli). O whisperx do arquivo inteiro funde/engole tomadas repetidas
+    """Transcreve CADA trecho isolado (VoiceStudio). O whisperx do arquivo inteiro funde/engole tomadas repetidas
     (ex.: 'Primeiro de tudo, pesquisa sobre a documentação infe...' virou só 'Primeiro'); isolado não tem como fundir."""
     cache = pathlib.Path(cache); memo = json.load(open(cache)) if cache.exists() else {}
     for a, b in spans:
@@ -71,7 +68,7 @@ def iso(src, spans, cache):
         if k in memo: continue
         wav = cache.with_suffix(".tmp.wav")
         sh(["ffmpeg", "-nostdin", "-y", "-v", "error", "-ss", f"{max(0, a - 0.05):.3f}", "-t", f"{b - a + 0.15:.3f}", "-i", str(src), "-ar", "16000", "-ac", "1", str(wav)])
-        memo[k] = " ".join(sh([WHISPER, "-m", WMODEL, "-l", "pt", "-nt", "-np", str(wav)]).stdout.split())
+        memo[k] = " ".join(transcrever_wav(wav)[1].split())
         json.dump(memo, open(cache, "w"), ensure_ascii=False)
     wav = cache.with_suffix(".tmp.wav"); wav.unlink(missing_ok=True)
     return [memo[f"{a:.2f}-{b:.2f}"] for a, b in spans]

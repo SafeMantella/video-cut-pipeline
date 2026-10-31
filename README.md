@@ -55,12 +55,12 @@ python3 evals/evals.py run evals/casos/comandos-falsos.json               # test
 
 - Python 3.10+ (`numpy` nos scripts de legenda), `ffmpeg` e `ffprobe`.
 - [`transcrever-ptbr`](https://github.com/SafeMantella/transcrever-ptbr) como **pasta irmã** (os evals e o `transcrever_ambos.sh` chamam `ferramentas/transcrever/transcrever.py`).
-- `whisper-cli` ([whisper.cpp](https://github.com/ggml-org/whisper.cpp)) para os testes e para o motor `vad`.
+- [VoiceStudio](https://github.com/debpalash/VoiceStudio) rodando local (`http://127.0.0.1:3900`): é o ASR de todos os motores e da transcrição de trecho isolado (via `transcrever-ptbr/voicestudio.py`).
 - Áudio limpo (tirar ruído antes melhora o corte e a transcrição): veja [Adobe-Podcast-for-Claude-Code](https://github.com/SafeMantella/Adobe-Podcast-for-Claude-Code).
 
 ## Antes de usar (honestidade)
 
-- Foi feito pro projeto de redes sociais do autor, no macOS, com uma estrutura de pastas fixa (`ferramentas/`, `gravações/…/edit`). Os scripts têm **caminhos absolutos** de modelos (`/Volumes/1TB Mac/...`) e `evals.py` assume a raiz do projeto dois níveis acima. Ajuste as variáveis `WHISPER_CPP_BIN`, `WHISPER_CPP_MODEL` e `WHISPER_VAD_MODEL` e os caminhos do `transcrever_ambos.sh`.
+- Foi feito pro projeto de redes sociais do autor, no macOS, com uma estrutura de pastas fixa (`ferramentas/`, `gravações/…/edit`). `evals.py` assume a raiz do projeto dois níveis acima. Se o VoiceStudio não estiver no endereço padrão, exporte `VOICESTUDIO_URL`.
 - `gerar_legendas.py` é o script de um vídeo específico (lê `t.json` e `audio.wav` da pasta atual e tem correções de texto escritas à mão). Use como modelo, não como ferramenta pronta.
 - `evals/casos/` traz o caso do autor como exemplo de formato; os vídeos dele não estão no repo.
 - O detector de retake é heurístico: retake no meio de fala contínua (sem pausa ≥ 0,3 s) não é pego. Sempre leia a tabela `decisoes.md` e assista a prévia.

@@ -3,10 +3,10 @@
 (o whisper do arquivo inteiro funde retakes) e gera um proxy 480p leve pro artifact.
 Uso: preparar.py video.mp4 [-a audio.mp3] [-o pasta] [--min-sil 0.7]
 Saída: <pasta>/proxy.mp4 + <pasta>/chunks.json  (evals-edicao/publicar.py sobe isso pro artifact)"""
-import argparse, array, base64, json, math, os, pathlib, re, subprocess
+import argparse, array, base64, json, math, os, pathlib, re, subprocess, sys
 
-WHISPER = os.environ.get("WHISPER_CPP_BIN", "/opt/homebrew/bin/whisper-cli")
-WMODEL = os.environ.get("WHISPER_CPP_MODEL", "/Volumes/1TB Mac/Code/Skills/local-video-use/models/ggml-large-v3.bin")
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "transcrever-ptbr"))  # repo irmão
+from voicestudio import transcrever_wav  # ASR local (VoiceStudio), motor ativo = whisperx
 PAD = 0.08  # respiro de cada lado do chunk; as bordas ficam ajustáveis na interface
 
 
@@ -50,7 +50,7 @@ def chunks(audio, total, min_sil):
 
 def transcrever(audio, a, b, wav):
     sh(["ffmpeg", "-nostdin", "-y", "-v", "error", "-ss", f"{a:.3f}", "-t", f"{b - a:.3f}", "-i", str(audio), "-ar", "16000", "-ac", "1", str(wav)])
-    return " ".join(sh([WHISPER, "-m", WMODEL, "-l", "pt", "-nt", "-np", str(wav)]).stdout.split())
+    return " ".join(transcrever_wav(pathlib.Path(wav))[1].split())
 
 
 def main():

@@ -10,7 +10,7 @@ Decidido por Pedro em 22/10/2026: as anotações de corte (o que manter, remover
 Pastas: `<edit>` = pasta `edit/` do vídeo; `<pasta>` = `<edit>/evals-edicao/`.
 
 1. **Preparar** — `python3 ferramentas/evals-edicao/preparar.py <video.mp4> -a <audio.mp3> -o <pasta>`
-   Detecta silêncio >0,7 s a −40 dB (`--min-sil` muda), monta os chunks (cada chunk = fala entre silêncios, com 0,08 s de respiro), calcula a onda e faz o proxy 480p. Saída: `chunks.json` (inclui `peaks`), `proxy.mp4`. `--texto` transcreve cada chunk isolado (whisper-cli large-v3, lento); **por padrão não transcreve** (a legenda só nasce depois do corte final, Pedro 22/10/2026). Sem texto, as sugestões de retake por conteúdo ficam sem base: usar `--texto` quando for preciso eu sugerir retakes.
+   Detecta silêncio >0,7 s a −40 dB (`--min-sil` muda), monta os chunks (cada chunk = fala entre silêncios, com 0,08 s de respiro), calcula a onda e faz o proxy 480p. Saída: `chunks.json` (inclui `peaks`), `proxy.mp4`. `--texto` transcreve cada chunk isolado (VoiceStudio, motor ativo; lento); **por padrão não transcreve** (a legenda só nasce depois do corte final, Pedro 22/10/2026). Sem texto, as sugestões de retake por conteúdo ficam sem base: usar `--texto` quando for preciso eu sugerir retakes.
 2. **Sugestões** — o agente escreve `<pasta>/sugestoes.json`: `{"1": {"action": "manter", "why": "motivo curto", "detail": "o que entra (opcional)"}}`. Ações: `manter`, `remover`, `motion`, `imagem`, `imagem+motion`. Aplicar os aprendizados de `memory/evals-edicao-manual.md` (pausa interna, tomada truncada, imagem sempre com motion).
 2b. **Imagens (proativo)** — pra cada chunk com `imagem`/`imagem+motion`, rodar a busca de `ferramentas/buscar-imagens/README.md`, subir os assets e `juntar` em `sugestoes.json` (`images`). A página mostra as opções; o Pedro escolhe.
 2c. **Opções de motion (Pedro, 26/10/2026)** — pra cada chunk `motion`/`imagem+motion`, escrever em `sugestoes.json` `motions`: 4 opções `{label, desc, timing}` (formatos diferentes entre si; ilustração, não só pill de texto; `desc` diz o que aparece; `timing` ancora os beats na fala do chunk, ex. "0–1 s desenha; 2 s X"; respeitar a zona livre acima da cabeça e o hook sem tela cheia). A página mostra 4 cartões; o Pedro escolhe (teclas 6–9) e a escolha volta em `reviews`: `motionChoice` (0–3), `motionLabel`, `motionDesc`. `anotar.py` copia pra `anotacoes.*`. Substitui a entrevista de motion no chat.
@@ -36,7 +36,7 @@ Pastas: `<edit>` = pasta `edit/` do vídeo; `<pasta>` = `<edit>/evals-edicao/`.
 - Salva sozinho (500 ms) em `reviews/`; escrita serializada por doc.
 
 ## Arquivos
-`preparar.py`, `semear.py`, `preview.py` (CLIs, só stdlib + ffmpeg/whisper-cli), `artifact.html`, `MANUAL.md`, este README. Por vídeo, em `<edit>/evals-edicao/`: `chunks.json`, `iso.json` (cache de texto), `proxy.mp4`, `sugestoes.json`, `seed/`, `db/reviews/`, `preview N.mp4`.
+`preparar.py`, `semear.py`, `preview.py` (CLIs, só stdlib + ffmpeg + VoiceStudio local), `artifact.html`, `MANUAL.md`, este README. Por vídeo, em `<edit>/evals-edicao/`: `chunks.json`, `iso.json` (cache de texto), `proxy.mp4`, `sugestoes.json`, `seed/`, `db/reviews/`, `preview N.mp4`.
 
 ## Limites e gotchas
 - O raw pode ter rotação nos metadados (o vertical do iPhone vem 3840×2160 + rotation=90): o ffmpeg já corrige; a página recebe o proxy girado.

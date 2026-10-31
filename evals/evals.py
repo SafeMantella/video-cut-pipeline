@@ -12,10 +12,11 @@ Specs/gotchas: ferramentas/evals/README.md"""
 import sys, re, json, os, subprocess, pathlib, array, math
 from difflib import SequenceMatcher
 
-ROOT = pathlib.Path(__file__).resolve().parents[2]
-TRANSCREVER = ROOT / "ferramentas/transcrever/transcrever.py"
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "transcrever-ptbr"))  # repo irmão
-from voicestudio import transcrever_wav  # ASR local (VoiceStudio), motor ativo = whisperx
+ROOT = pathlib.Path(__file__).absolute().parents[2]  # raiz do projeto via symlink ferramentas/evals (sem resolve: resolve cai em _repos/)
+IRMAO = pathlib.Path(__file__).resolve().parents[2] / "transcrever-ptbr"  # repo irmão
+TRANSCREVER = IRMAO / "transcrever.py"
+sys.path.insert(0, str(IRMAO))
+from voicestudio import transcrever_wav  # ASR local (VoiceStudio), usa o motor ativo
 
 # mesmos números do corte-silencio/cortes.py (regras fixas do Pedro)
 NOISE, MIN_SIL, FINE_SIL, END_PAD, START_PAD = "-50dB", 0.7, 0.3, 0.37, 0.12
